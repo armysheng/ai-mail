@@ -125,16 +125,28 @@ export function EmailAccountSetup({ onBack, onComplete }) {
         },
       })
 
+      // Check if response is ok and content type is JSON
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        throw new Error(`Expected JSON response, got: ${contentType}. Response: ${text.substring(0, 200)}`)
+      }
+
       const data = await response.json()
       if (data.success) {
         setAuthToken(data.data.token)
         return data.data.token
+      } else {
+        throw new Error(data.error?.message || '登录失败')
       }
     } catch (error) {
       console.error('Authentication error:', error)
+      throw new Error(`认证失败: ${error.message}`)
     }
-    
-    throw new Error('认证失败')
   }
 
   const handleProviderSelect = (provider) => {
@@ -169,6 +181,12 @@ export function EmailAccountSetup({ onBack, onComplete }) {
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        throw new Error(`Expected JSON response, got: ${contentType}. Response: ${text.substring(0, 200)}`)
       }
 
       const data = await response.json()
@@ -217,6 +235,12 @@ export function EmailAccountSetup({ onBack, onComplete }) {
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        throw new Error(`Expected JSON response, got: ${contentType}. Response: ${text.substring(0, 200)}`)
       }
 
       const data = await response.json()
@@ -279,6 +303,12 @@ export function EmailAccountSetup({ onBack, onComplete }) {
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        throw new Error(`Expected JSON response, got: ${contentType}. Response: ${text.substring(0, 200)}`)
       }
 
       const data = await response.json()
