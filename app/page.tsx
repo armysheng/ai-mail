@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -32,7 +32,7 @@ import { NotificationCenter, FloatingNotification } from "@/components/notificat
 import { ProfilePage } from "@/components/profile-page"
 import { EmailAccountSetup } from "@/components/email-account-setup"
 
-export default function EmailApp() {
+function EmailApp() {
   const [activeTab, setActiveTab] = useState("inbox")
   const [viewMode, setViewMode] = useState("normal") // normal | ai
   const [selectedEmail, setSelectedEmail] = useState(null)
@@ -1477,5 +1477,22 @@ export default function EmailApp() {
         />
       ))}
     </div>
+  )
+}
+
+// Loading component for Suspense fallback
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+    </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <EmailApp />
+    </Suspense>
   )
 }

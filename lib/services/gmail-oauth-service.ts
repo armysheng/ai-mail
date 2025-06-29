@@ -4,6 +4,17 @@ export class GmailOAuthService {
   private oauth2Client: any
 
   constructor() {
+    // Check for required environment variables
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      throw new Error("GOOGLE_CLIENT_ID environment variable is required")
+    }
+    if (!process.env.GOOGLE_CLIENT_SECRET) {
+      throw new Error("GOOGLE_CLIENT_SECRET environment variable is required")
+    }
+    if (!process.env.GOOGLE_REDIRECT_URI) {
+      throw new Error("GOOGLE_REDIRECT_URI environment variable is required")
+    }
+
     this.oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
