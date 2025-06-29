@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
+import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 
 export interface User {
   id: string
@@ -8,31 +9,22 @@ export interface User {
   name: string
 }
 
-// 简化的认证函数，用于演示
+// JWT token 验证
 export async function verifyToken(request: NextRequest): Promise<User | null> {
   try {
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // 为了演示，返回一个模拟用户
-      return {
-        id: 'demo-user-id',
-        email: 'demo@example.com',
-        name: '演示用户'
-      }
+      return null
     }
 
     const token = authHeader.substring(7)
+    const decoded = jwt.verify(token, JWT_SECRET) as any
     
-    // 简化的token验证，实际应用中应该使用JWT
-    if (token === 'demo-token') {
-      return {
-        id: 'demo-user-id',
-        email: 'demo@example.com',
-        name: '演示用户'
-      }
+    return {
+      id: decoded.id,
+      email: decoded.email,
+      name: decoded.name
     }
-    
-    return null
   } catch (error) {
     console.error('Token verification error:', error)
     return null
@@ -40,6 +32,18 @@ export async function verifyToken(request: NextRequest): Promise<User | null> {
 }
 
 export function generateToken(user: User): string {
-  // 简化的token生成，实际应用中应该使用JWT
-  return 'demo-token'
+  return jwt.sign(
+    { id: user.id, email: user.email, name: user.name },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  )
+}
+
+// 临时的演示用户登录
+export function getDemoUser(): User {
+  return {
+    id: 'demo-user-id',
+    email: 'demo@example.com',
+    name: '演示用户'
+  }
 }

@@ -13,6 +13,7 @@ export function EmailAccountSetup({ onBack, onComplete }) {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [testResult, setTestResult] = useState(null)
+  const [authToken, setAuthToken] = useState(null)
 
   const [formData, setFormData] = useState({
     email: "",
@@ -112,6 +113,30 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     },
   ]
 
+  // 确保用户已登录
+  const ensureAuthenticated = async () => {
+    if (authToken) return authToken
+
+    try {
+      const response = await fetch('/api/auth/demo-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setAuthToken(data.data.token)
+        return data.data.token
+      }
+    } catch (error) {
+      console.error('Authentication error:', error)
+    }
+    
+    throw new Error('认证失败')
+  }
+
   const handleProviderSelect = (provider) => {
     setSelectedProvider(provider)
     setFormData((prev) => ({
@@ -131,18 +156,32 @@ export function EmailAccountSetup({ onBack, onComplete }) {
   const handleOAuthFlow = async (provider) => {
     setIsLoading(true)
     try {
-      // 模拟OAuth流程
-      console.log(`Starting OAuth flow for ${provider.name}`)
+      const token = await ensureAuthenticated()
       
-      // 模拟延迟
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // 模拟成功
-      setStep(4)
-      console.log("OAuth flow completed successfully")
+      // 获取OAuth授权URL
+      const response = await fetch(`/api/auth/oauth/${provider.id}/url`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        // 打开OAuth授权页面
+        window.location.href = data.data.authUrl
+      } else {
+        throw new Error(data.error?.message || "获取授权URL失败")
+      }
     } catch (error) {
       console.error("OAuth flow error:", error)
-      alert("OAuth认证失败，请重试")
+      alert(`OAuth认证失败: ${error.message}`)
     } finally {
       setIsLoading(false)
     }
@@ -153,26 +192,53 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     setTestResult(null)
 
     try {
-      // 模拟连接测试
-      console.log("Testing connection...")
+      const token = await ensureAuthenticated()
       
-      // 模拟延迟
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // 模拟成功结果
-      setTestResult({
-        success: true,
-        message: "连接测试成功！",
-        details: {
-          imap: { success: true, message: "IMAP连接成功" },
-          smtp: { success: true, message: "SMTP连接成功" }
-        }
+      const response = await fetch("/api/accounts/test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          provider: selectedProvider.id,
+          email: formData.email,
+          password: formData.password,
+          settings: {
+            imapServer: formData.imapServer,
+            imapPort: formData.imapPort,
+            imapSecurity: formData.imapSecurity,
+            smtpServer: formData.smtpServer,
+            smtpPort: formData.smtpPort,
+            smtpSecurity: formData.smtpSecurity,
+          },
+        }),
       })
-      setStep(3)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setTestResult({
+          success: true,
+          message: "连接测试成功！",
+          details: data.data,
+        })
+        setStep(3)
+      } else {
+        setTestResult({
+          success: false,
+          message: data.error?.message || "连接测试失败",
+          details: data.error?.details,
+        })
+      }
     } catch (error) {
       setTestResult({
         success: false,
-        message: "连接测试失败，请检查配置",
+        message: `连接测试失败: ${error.message}`,
         details: error.message,
       })
     } finally {
@@ -184,14 +250,45 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     setIsLoading(true)
 
     try {
-      // 模拟添加账户
-      console.log("Adding email account...")
+      const token = await ensureAuthenticated()
       
-      // 模拟延迟
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      setStep(4)
-      console.log("Account added successfully")
+      const response = await fetch("/api/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          provider: selectedProvider.id,
+          email: formData.email,
+          password: formData.password,
+          displayName: formData.displayName || formData.email,
+          settings: {
+            imapServer: formData.imapServer,
+            imapPort: formData.imapPort,
+            imapSecurity: formData.imapSecurity,
+            smtpServer: formData.smtpServer,
+            smtpPort: formData.smtpPort,
+            smtpSecurity: formData.smtpSecurity,
+            syncEnabled: formData.syncEnabled,
+            syncInterval: formData.syncInterval,
+            maxHistory: formData.maxHistory,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setStep(4)
+        console.log("Account added successfully:", data.data)
+      } else {
+        throw new Error(data.error?.message || "添加账户失败")
+      }
     } catch (error) {
       console.error("Add account error:", error)
       alert("添加邮箱失败：" + error.message)
