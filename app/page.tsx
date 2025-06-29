@@ -30,6 +30,7 @@ import { Calendar } from "@/components/calendar"
 import { EventForm } from "@/components/event-form"
 import { NotificationCenter, FloatingNotification } from "@/components/notification-center"
 import { ProfilePage } from "@/components/profile-page"
+import { EmailAccountSetup } from "@/components/email-account-setup"
 
 export default function EmailApp() {
   const [activeTab, setActiveTab] = useState("inbox")
@@ -39,6 +40,7 @@ export default function EmailApp() {
   const [emailFilter, setEmailFilter] = useState("all") // 统一的邮件分类筛选
   const [contactFilter, setContactFilter] = useState("all")
   const [selectedContacts, setSelectedContacts] = useState([])
+  const [isSettingUpEmail, setIsSettingUpEmail] = useState(false)
 
   // 用户统计数据
   const [userStats, setUserStats] = useState({
@@ -990,7 +992,7 @@ export default function EmailApp() {
                 onToggle={() => setIsNotificationCenterOpen(!isNotificationCenterOpen)}
               />
             </div>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => setIsSettingUpEmail(true)}>
               <Settings className="h-5 w-5" />
             </Button>
           </div>
@@ -1135,6 +1137,13 @@ export default function EmailApp() {
           <div className="text-center py-12">
             <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">暂无邮件</p>
+            <Button 
+              variant="outline" 
+              className="mt-4" 
+              onClick={() => setIsSettingUpEmail(true)}
+            >
+              添加邮箱账户
+            </Button>
           </div>
         ) : (
           filteredEmails.map((email) => (
@@ -1209,6 +1218,13 @@ export default function EmailApp() {
           <div className="text-center py-12">
             <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">暂无相关内容</p>
+            <Button 
+              variant="outline" 
+              className="mt-4" 
+              onClick={() => setIsSettingUpEmail(true)}
+            >
+              添加邮箱账户
+            </Button>
           </div>
         ) : (
           filteredCards.map((card, index) => {
@@ -1339,6 +1355,19 @@ export default function EmailApp() {
   const handleViewOriginalEmail = (emailId) => {
     const email = emails.find((e) => e.id === emailId)
     setSelectedEmail(email)
+  }
+
+  // 如果正在设置邮箱
+  if (isSettingUpEmail) {
+    return (
+      <EmailAccountSetup
+        onBack={() => setIsSettingUpEmail(false)}
+        onComplete={() => {
+          setIsSettingUpEmail(false)
+          // 这里可以刷新邮件列表
+        }}
+      />
+    )
   }
 
   // 如果正在创建或编辑事件
