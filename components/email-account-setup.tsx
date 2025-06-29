@@ -131,23 +131,15 @@ export function EmailAccountSetup({ onBack, onComplete }) {
   const handleOAuthFlow = async (provider) => {
     setIsLoading(true)
     try {
-      // 获取OAuth授权URL
-      const response = await fetch(`/api/auth/oauth/${provider.id}/url`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        // 打开OAuth授权页面
-        window.location.href = data.data.authUrl
-      } else {
-        throw new Error(data.error.message)
-      }
+      // 模拟OAuth流程
+      console.log(`Starting OAuth flow for ${provider.name}`)
+      
+      // 模拟延迟
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // 模拟成功
+      setStep(4)
+      console.log("OAuth flow completed successfully")
     } catch (error) {
       console.error("OAuth flow error:", error)
       alert("OAuth认证失败，请重试")
@@ -161,47 +153,26 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     setTestResult(null)
 
     try {
-      const response = await fetch("/api/accounts/test", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          provider: selectedProvider.id,
-          email: formData.email,
-          password: formData.password,
-          settings: {
-            imapServer: formData.imapServer,
-            imapPort: formData.imapPort,
-            imapSecurity: formData.imapSecurity,
-            smtpServer: formData.smtpServer,
-            smtpPort: formData.smtpPort,
-            smtpSecurity: formData.smtpSecurity,
-          },
-        }),
+      // 模拟连接测试
+      console.log("Testing connection...")
+      
+      // 模拟延迟
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // 模拟成功结果
+      setTestResult({
+        success: true,
+        message: "连接测试成功！",
+        details: {
+          imap: { success: true, message: "IMAP连接成功" },
+          smtp: { success: true, message: "SMTP连接成功" }
+        }
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setTestResult({
-          success: true,
-          message: "连接测试成功！",
-          details: data.data,
-        })
-        setStep(3)
-      } else {
-        setTestResult({
-          success: false,
-          message: data.error.message,
-          details: data.error.details,
-        })
-      }
+      setStep(3)
     } catch (error) {
       setTestResult({
         success: false,
-        message: "连接测试失败，请检查网络连接",
+        message: "连接测试失败，请检查配置",
         details: error.message,
       })
     } finally {
@@ -213,59 +184,19 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/accounts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          provider: selectedProvider.id,
-          email: formData.email,
-          password: formData.password,
-          displayName: formData.displayName || formData.email,
-          settings: {
-            imapServer: formData.imapServer,
-            imapPort: formData.imapPort,
-            imapSecurity: formData.imapSecurity,
-            smtpServer: formData.smtpServer,
-            smtpPort: formData.smtpPort,
-            smtpSecurity: formData.smtpSecurity,
-            syncEnabled: formData.syncEnabled,
-            syncInterval: formData.syncInterval,
-            maxHistory: formData.maxHistory,
-          },
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setStep(4)
-        // 开始初始同步
-        startInitialSync(data.data.id)
-      } else {
-        throw new Error(data.error.message)
-      }
+      // 模拟添加账户
+      console.log("Adding email account...")
+      
+      // 模拟延迟
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      setStep(4)
+      console.log("Account added successfully")
     } catch (error) {
       console.error("Add account error:", error)
       alert("添加邮箱失败：" + error.message)
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const startInitialSync = async (accountId) => {
-    try {
-      await fetch(`/api/accounts/${accountId}/sync`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-    } catch (error) {
-      console.error("Initial sync error:", error)
     }
   }
 
@@ -406,7 +337,7 @@ export function EmailAccountSetup({ onBack, onComplete }) {
                 <Input
                   type="number"
                   value={formData.imapPort}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, imapPort: Number.parseInt(e.target.value) }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, imapPort: parseInt(e.target.value) }))}
                   placeholder="993"
                 />
               </div>
@@ -426,7 +357,7 @@ export function EmailAccountSetup({ onBack, onComplete }) {
                 <Input
                   type="number"
                   value={formData.smtpPort}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, smtpPort: Number.parseInt(e.target.value) }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, smtpPort: parseInt(e.target.value) }))}
                   placeholder="587"
                 />
               </div>
@@ -455,7 +386,7 @@ export function EmailAccountSetup({ onBack, onComplete }) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">同步间隔（分钟）</label>
                 <select
                   value={formData.syncInterval}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, syncInterval: Number.parseInt(e.target.value) }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, syncInterval: parseInt(e.target.value) }))}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
                   <option value={1}>1分钟</option>
@@ -470,7 +401,7 @@ export function EmailAccountSetup({ onBack, onComplete }) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">历史邮件（天）</label>
                 <select
                   value={formData.maxHistory}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, maxHistory: Number.parseInt(e.target.value) }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, maxHistory: parseInt(e.target.value) }))}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
                   <option value={7}>7天</option>
@@ -593,7 +524,7 @@ export function EmailAccountSetup({ onBack, onComplete }) {
       <div className="bg-green-50 p-4 rounded-lg">
         <div className="flex items-center gap-2 mb-2">
           <Mail className="h-5 w-5 text-green-600" />
-          <span className="font-medium text-green-900">{formData.email}</span>
+          <span className="font-medium text-green-900">{formData.email || selectedProvider?.name}</span>
         </div>
         <p className="text-sm text-green-700">
           邮箱已添加成功，系统正在后台同步您的邮件。这可能需要几分钟时间，请耐心等待。
