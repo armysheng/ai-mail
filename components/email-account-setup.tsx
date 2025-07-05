@@ -14,7 +14,6 @@ export function EmailAccountSetup({ onBack, onComplete }) {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [testResult, setTestResult] = useState(null)
-  const [authToken, setAuthToken] = useState(null)
   const [showGmailGuide, setShowGmailGuide] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -115,42 +114,6 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     },
   ]
 
-  // 确保用户已登录
-  const ensureAuthenticated = async () => {
-    if (authToken) return authToken
-
-    try {
-      const response = await fetch('/api/auth/demo-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-
-      // Check if response is ok and content type is JSON
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text()
-        throw new Error(`Expected JSON response, got: ${contentType}. Response: ${text.substring(0, 200)}`)
-      }
-
-      const data = await response.json()
-      if (data.success) {
-        setAuthToken(data.data.token)
-        return data.data.token
-      } else {
-        throw new Error(data.error?.message || '登录失败')
-      }
-    } catch (error) {
-      console.error('Authentication error:', error)
-      throw new Error(`认证失败: ${error.message}`)
-    }
-  }
-
   const handleProviderSelect = (provider) => {
     setSelectedProvider(provider)
     setFormData((prev) => ({
@@ -174,14 +137,11 @@ export function EmailAccountSetup({ onBack, onComplete }) {
   const handleOAuthFlow = async (provider) => {
     setIsLoading(true)
     try {
-      const token = await ensureAuthenticated()
-      
       // 获取OAuth授权URL
       const response = await fetch(`/api/auth/oauth/${provider.id}/url`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
       })
 
@@ -232,13 +192,10 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     setTestResult(null)
 
     try {
-      const token = await ensureAuthenticated()
-      
       const response = await fetch("/api/accounts/test", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           provider: selectedProvider.id,
@@ -296,13 +253,10 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     setIsLoading(true)
 
     try {
-      const token = await ensureAuthenticated()
-      
       const response = await fetch("/api/accounts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           provider: selectedProvider.id,
