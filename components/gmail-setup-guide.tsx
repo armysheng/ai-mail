@@ -16,6 +16,8 @@ export function GmailSetupGuide({ onComplete, onBack }) {
     setError(null)
 
     try {
+      console.log("Starting OAuth flow...")
+      
       const response = await fetch("/api/auth/oauth/gmail/url", {
         method: "POST",
         headers: {
@@ -23,18 +25,36 @@ export function GmailSetupGuide({ onComplete, onBack }) {
         },
       })
 
+      console.log("Response status:", response.status)
+      console.log("Response headers:", Object.fromEntries(response.headers.entries()))
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        const errorText = await response.text()
+        console.error("HTTP error response:", errorText)
+        throw new Error(`HTTP ${response.status}: ${response.statusText}. Response: ${errorText}`)
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        console.error("Non-JSON response:", text)
+        throw new Error(`Expected JSON response, got: ${contentType}. Response: ${text.substring(0, 200)}`)
       }
 
       const data = await response.json()
+      console.log("OAuth URL response:", data)
 
       if (data.success) {
         setAuthUrl(data.data.authUrl)
         setStep(2)
         
         // 打开OAuth授权页面
-        window.open(data.data.authUrl, '_blank', 'width=500,height=600')
+        const popup = window.open(data.data.authUrl, '_blank', 'width=500,height=600')
+        
+        // 检查弹窗是否被阻止
+        if (!popup) {
+          throw new Error("弹窗被浏览器阻止，请允许弹窗或手动点击链接")
+        }
       } else {
         throw new Error(data.error?.message || "获取授权URL失败")
       }
@@ -47,8 +67,18 @@ export function GmailSetupGuide({ onComplete, onBack }) {
   }
 
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text)
-    alert("已复制到剪贴板")
+    navigator.clipboard.writeText(text).then(() => {
+      alert("已复制到剪贴板")
+    }).catch(() => {
+      // 降级方案
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      alert("已复制到剪贴板")
+    })
   }
 
   const renderStep1 = () => (
@@ -107,9 +137,9 @@ export function GmailSetupGuide({ onComplete, onBack }) {
         <div className="flex items-start gap-2">
           <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
           <div className="text-sm">
-            <p className="font-medium text-yellow-900 mb-1">注意事项</p>
+            <p className="font-medium text-yellow-900 mb-1">配置要求</p>
             <p className="text-yellow-700">
-              点击授权后将在新窗口中打开Google授权页面。请在新窗口中完成授权，然后返回此页面。
+              请确保已在 .env.local 文件中配置了正确的 Google OAuth 凭据（GOOGLE_CLIENT_ID、GOOGLE_CLIENT_SECRET、GOOGLE_REDIRECT_URI）。
             </p>
           </div>
         </div>
@@ -120,8 +150,17 @@ export function GmailSetupGuide({ onComplete, onBack }) {
           <div className="flex items-start gap-2">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
             <div>
-              <p className="font-medium text-red-900">授权失败</p>
+              <p className="font-medium text-red-900">配置错误</p>
               <p className="text-sm text-red-700 mt-1">{error}</p>
+              <div className="mt-2 text-xs text-red-600">
+                <p>请检查以下配置：</p>
+                <ul className="list-disc list-inside mt-1">
+                  <li>GOOGLE_CLIENT_ID 是否已设置</li>
+                  <li>GOOGLE_CLIENT_SECRET 是否已设置</li>
+                  <li>GOOGLE_REDIRECT_URI 是否正确</li>
+                  <li>是否已重启开发服务器</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

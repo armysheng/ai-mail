@@ -15,28 +15,42 @@ export class GmailOAuthService {
       throw new Error("GOOGLE_REDIRECT_URI environment variable is required")
     }
 
-    this.oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI,
-    )
+    try {
+      this.oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI,
+      )
+    } catch (error) {
+      console.error("Failed to initialize OAuth2 client:", error)
+      throw new Error(`OAuth2 client initialization failed: ${error.message}`)
+    }
   }
 
   // 获取授权URL
   getAuthUrl(): string {
-    const scopes = [
-      "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/gmail.send",
-      "https://www.googleapis.com/auth/gmail.modify",
-      "https://www.googleapis.com/auth/userinfo.email",
-      "https://www.googleapis.com/auth/userinfo.profile",
-    ]
+    try {
+      const scopes = [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.send",
+        "https://www.googleapis.com/auth/gmail.modify",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+      ]
 
-    return this.oauth2Client.generateAuthUrl({
-      access_type: "offline",
-      scope: scopes,
-      prompt: "consent", // 强制显示同意页面以获取refresh_token
-    })
+      const authUrl = this.oauth2Client.generateAuthUrl({
+        access_type: "offline",
+        scope: scopes,
+        prompt: "consent", // 强制显示同意页面以获取refresh_token
+        include_granted_scopes: true,
+      })
+
+      console.log("Generated auth URL:", authUrl)
+      return authUrl
+    } catch (error) {
+      console.error("Failed to generate auth URL:", error)
+      throw new Error(`Failed to generate authorization URL: ${error.message}`)
+    }
   }
 
   // 交换授权码获取Token
@@ -47,8 +61,15 @@ export class GmailOAuthService {
     userInfo: any
   }> {
     try {
+      console.log("Exchanging code for tokens:", code.substring(0, 20) + "...")
+      
       // 获取访问令牌
       const { tokens } = await this.oauth2Client.getToken(code)
+      console.log("Received tokens:", {
+        access_token: tokens.access_token ? "present" : "missing",
+        refresh_token: tokens.refresh_token ? "present" : "missing",
+        expiry_date: tokens.expiry_date
+      })
 
       if (!tokens.access_token) {
         throw new Error("No access token received")
@@ -60,6 +81,7 @@ export class GmailOAuthService {
       // 获取用户信息
       const oauth2 = google.oauth2({ version: "v2", auth: this.oauth2Client })
       const userInfoResponse = await oauth2.userinfo.get()
+      console.log("User info received:", userInfoResponse.data)
 
       return {
         accessToken: tokens.access_token,
@@ -69,7 +91,7 @@ export class GmailOAuthService {
       }
     } catch (error) {
       console.error("Gmail OAuth token exchange error:", error)
-      throw new Error("Failed to exchange authorization code")
+      throw new Error(`Failed to exchange authorization code: ${error.message}`)
     }
   }
 
@@ -95,7 +117,7 @@ export class GmailOAuthService {
       }
     } catch (error) {
       console.error("Gmail token refresh error:", error)
-      throw new Error("Failed to refresh access token")
+      throw new Error(`Failed to refresh access token: ${error.message}`)
     }
   }
 
@@ -122,7 +144,7 @@ export class GmailOAuthService {
       await this.oauth2Client.revokeToken(accessToken)
     } catch (error) {
       console.error("Gmail token revocation error:", error)
-      throw new Error("Failed to revoke access token")
+      throw new Error(`Failed to revoke access token: ${error.message}`)
     }
   }
 }
