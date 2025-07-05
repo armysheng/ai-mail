@@ -3,12 +3,13 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, AlertCircle, Loader2, Shield, Mail, ArrowRight } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2, Shield, Mail, ArrowRight, ExternalLink, Copy } from "lucide-react"
 
 export function GmailSetupGuide({ onComplete, onBack }) {
   const [step, setStep] = useState(1) // 1: 介绍, 2: 授权中, 3: 完成
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [authUrl, setAuthUrl] = useState("")
 
   const handleStartOAuth = async () => {
     setIsLoading(true)
@@ -19,18 +20,23 @@ export function GmailSetupGuide({ onComplete, onBack }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
 
       const data = await response.json()
 
       if (data.success) {
+        setAuthUrl(data.data.authUrl)
         setStep(2)
+        
         // 打开OAuth授权页面
-        window.location.href = data.data.authUrl
+        window.open(data.data.authUrl, '_blank', 'width=500,height=600')
       } else {
-        throw new Error(data.error.message)
+        throw new Error(data.error?.message || "获取授权URL失败")
       }
     } catch (error) {
       console.error("Gmail OAuth error:", error)
@@ -38,6 +44,11 @@ export function GmailSetupGuide({ onComplete, onBack }) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    alert("已复制到剪贴板")
   }
 
   const renderStep1 = () => (
@@ -98,7 +109,7 @@ export function GmailSetupGuide({ onComplete, onBack }) {
           <div className="text-sm">
             <p className="font-medium text-yellow-900 mb-1">注意事项</p>
             <p className="text-yellow-700">
-              点击授权后将跳转到Google官方页面，请在弹出的窗口中完成授权。授权完成后会自动返回。
+              点击授权后将在新窗口中打开Google授权页面。请在新窗口中完成授权，然后返回此页面。
             </p>
           </div>
         </div>
@@ -143,21 +154,44 @@ export function GmailSetupGuide({ onComplete, onBack }) {
         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">正在授权</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">等待授权</h2>
         <p className="text-gray-600">请在弹出的Google页面中完成授权</p>
       </div>
 
       <div className="bg-blue-50 p-4 rounded-lg">
-        <div className="text-center">
-          <p className="text-sm text-blue-700 mb-3">如果没有弹出授权页面，请点击下方按钮手动打开</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleStartOAuth}
-            className="text-blue-600 border-blue-200 bg-transparent"
-          >
-            重新打开授权页面
-          </Button>
+        <div className="text-center space-y-3">
+          <p className="text-sm text-blue-700 mb-3">如果没有弹出授权页面，请点击下方链接手动打开</p>
+          
+          {authUrl && (
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(authUrl, '_blank', 'width=500,height=600')}
+                className="text-blue-600 border-blue-200 bg-transparent"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                打开授权页面
+              </Button>
+              
+              <div className="text-xs text-gray-500">
+                <p>或复制链接到浏览器：</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="bg-gray-100 px-2 py-1 rounded text-xs break-all">
+                    {authUrl.substring(0, 50)}...
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(authUrl)}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -180,9 +214,18 @@ export function GmailSetupGuide({ onComplete, onBack }) {
             <div className="w-6 h-6 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-xs">
               3
             </div>
-            <span>自动返回应用</span>
+            <span>完成后关闭窗口</span>
           </div>
         </div>
+      </div>
+
+      <div className="flex gap-3">
+        <Button variant="outline" onClick={() => setStep(1)} className="flex-1 bg-transparent">
+          返回
+        </Button>
+        <Button onClick={() => setStep(3)} className="flex-1 bg-green-600 hover:bg-green-700">
+          我已完成授权
+        </Button>
       </div>
     </div>
   )
@@ -191,22 +234,25 @@ export function GmailSetupGuide({ onComplete, onBack }) {
     <div className="space-y-6">
       <div className="text-center mb-6">
         <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-gray-900 mb-2">授权成功</h2>
-        <p className="text-gray-600">Gmail账户已成功连接</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">设置完成</h2>
+        <p className="text-gray-600">Gmail账户配置已完成</p>
       </div>
 
       <div className="bg-green-50 p-4 rounded-lg">
         <div className="flex items-center gap-2 mb-2">
           <CheckCircle className="h-5 w-5 text-green-600" />
-          <span className="font-medium text-green-900">连接成功</span>
+          <span className="font-medium text-green-900">配置成功</span>
         </div>
-        <p className="text-sm text-green-700">您的Gmail账户已成功连接，系统正在后台同步您的邮件。</p>
+        <p className="text-sm text-green-700">
+          您的Gmail账户已成功配置。现在可以开始使用邮件功能了。
+        </p>
       </div>
 
       <div className="space-y-2">
         <h3 className="font-medium text-gray-700">接下来您可以：</h3>
         <ul className="text-sm text-gray-600 space-y-1">
-          <li>• 查看同步的邮件</li>
+          <li>• 查看和管理邮件</li>
+          <li>• 发送新邮件</li>
           <li>• 体验AI智能分类</li>
           <li>• 使用智能回复功能</li>
           <li>• 管理日程和任务</li>
@@ -214,7 +260,7 @@ export function GmailSetupGuide({ onComplete, onBack }) {
       </div>
 
       <Button onClick={onComplete} className="w-full">
-        完成设置
+        开始使用
       </Button>
     </div>
   )

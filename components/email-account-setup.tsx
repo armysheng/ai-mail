@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Mail, Shield, CheckCircle, AlertCircle, Loader2, Eye, EyeOff, HelpCircle } from "lucide-react"
+import { GmailSetupGuide } from "./gmail-setup-guide"
 
 export function EmailAccountSetup({ onBack, onComplete }) {
   const [step, setStep] = useState(1) // 1: 选择提供商, 2: 配置, 3: 验证, 4: 完成
@@ -14,6 +15,7 @@ export function EmailAccountSetup({ onBack, onComplete }) {
   const [showPassword, setShowPassword] = useState(false)
   const [testResult, setTestResult] = useState(null)
   const [authToken, setAuthToken] = useState(null)
+  const [showGmailGuide, setShowGmailGuide] = useState(false)
 
   const [formData, setFormData] = useState({
     email: "",
@@ -157,8 +159,12 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     }))
 
     if (provider.type === "oauth") {
-      // OAuth流程
-      handleOAuthFlow(provider)
+      if (provider.id === "gmail") {
+        setShowGmailGuide(true)
+      } else {
+        // 其他OAuth流程
+        handleOAuthFlow(provider)
+      }
     } else {
       // 密码认证流程
       setStep(2)
@@ -203,6 +209,22 @@ export function EmailAccountSetup({ onBack, onComplete }) {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // 如果显示Gmail设置指南
+  if (showGmailGuide) {
+    return (
+      <GmailSetupGuide
+        onBack={() => {
+          setShowGmailGuide(false)
+          setSelectedProvider(null)
+        }}
+        onComplete={() => {
+          setShowGmailGuide(false)
+          onComplete()
+        }}
+      />
+    )
   }
 
   const handleTestConnection = async () => {
@@ -645,7 +667,7 @@ export function EmailAccountSetup({ onBack, onComplete }) {
       <div className="text-center mb-6">
         <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
         <h2 className="text-xl font-bold text-gray-900 mb-2">添加成功</h2>
-        <p className="text-gray-600">邮箱已成功添加，正在进行初始同步</p>
+        <p className="text-gray-600">邮箱已成功添加到您的账户</p>
       </div>
 
       <div className="bg-green-50 p-4 rounded-lg">
@@ -654,17 +676,18 @@ export function EmailAccountSetup({ onBack, onComplete }) {
           <span className="font-medium text-green-900">{formData.email || selectedProvider?.name}</span>
         </div>
         <p className="text-sm text-green-700">
-          邮箱已添加成功，系统正在后台同步您的邮件。这可能需要几分钟时间，请耐心等待。
+          邮箱已添加成功，您现在可以开始使用邮件功能了。
         </p>
       </div>
 
       <div className="space-y-2">
         <h3 className="font-medium text-gray-700">接下来您可以：</h3>
         <ul className="text-sm text-gray-600 space-y-1">
-          <li>• 查看收件箱中的新邮件</li>
-          <li>• 在设置中调整同步频率</li>
-          <li>• 添加更多邮箱账户</li>
+          <li>• 查看收件箱中的邮件</li>
+          <li>• 发送和回复邮件</li>
           <li>• 体验AI智能分类功能</li>
+          <li>• 管理日程和任务</li>
+          <li>• 在设置中调整同步频率</li>
         </ul>
       </div>
 
